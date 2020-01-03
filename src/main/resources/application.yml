@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/matadata?serverTimezone=GMT%2B8&characterEncoding=utf-8&&allowMultiQueries=true
+    username: root
+    password: 123456
+server:
+  port: 18082
+mybatis:
+  mapper-locations: classpath:mybatis-mapper/*Mapper.xml

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zr.Inquiry.mapper.InquiryTotalMapper">
+
+   <select id="queryBaoJia" parameterType="com.zr.Inquiry.model.BaoJiaSelectVo"
+           resultType="com.zr.Inquiry.model.InquirySpareSelectVo">
+      SELECT DISTINCT (isp.spareCoding),isp.spareCoding,isp.spareName,isp.inquiryQty,isp.deliveryCycle,isp.currencyCode from inquirytotal it
+   LEFT JOIN inquirysparedetail isp on isp.inquiryId=it.id
+   LEFT JOIN inquirysupplierdetail isu on isu.inquiryId=it.id
+   LEFT JOIN spare_supplier ss on ss.vendorCode=isu.vendorCode
+   where isu.vendorCode=#{vendorCode}
+   <if test="spareCoding!=null and spareCoding!=''">
+      and isp.spareCoding=#{spareCoding}
+   </if>
+    <if test="spareName!=null and spareName!=''">
+       and isp.spareName=#{spareName}
+    </if>
+      group by isp.spareCoding
+   </select>
+
+   <select id="querySupplier" parameterType="integer" resultType="com.zr.Inquiry.model.SupplierSelectVo">
+      SELECT DISTINCT s.partnerCode,s.partnerName from legalperson_supplier ls LEFT JOIN supplier s
+   ON ls.partnerCode=s.partnerCode
+   LEFT JOIN legalperson l ON l.legalPersonCode=ls.legalPersonCode
+   where l.legalPersonId=#{legalPersonId}
+   </select>
+
+   <select id="queryByCodeList" parameterType="list" resultType="string">
+      SELECT  spareCode from spare WHERE  spareCode IN
+      <foreach collection="list" item="item" open="(" separator="," close=")">
+         #{item}
+      </foreach>
+   </select>
+
+
+   <select id="queryBySupplierCodeList" parameterType="list" resultType="string">
+      SELECT  vendorCode from supplier WHERE  vendorCode IN
+      <foreach collection="list" item="item" open="(" separator="," close=")">
+         #{item}
+      </foreach>
+   </select>
+
+
+   <insert id="insertSupplierDetail" parameterType="com.zr.Inquiry.model.InquirySupplierDetail">
+      insert into inquirysupplierdetail (vendorCode,vendor,inquiryId) VALUES
+      <foreach collection="list" item="item" open="(" separator="),(" close=")">
+         #{item.vendorCode},#{item.vendor},#{item.inquiryId}
+      </foreach>
+   </insert>
+
+   <select id="querySpareSupplierBySpareCodeList" parameterType="java.util.List" resultType="com.zr.Inquiry.model.SpareSupplierVo">
+      SELECT  * from spare_supplier WHERE  spareCoding IN
+      <foreach collection="list" item="item" open="(" separator="," close=")">
+         #{item}
+      </foreach>
+   </select>
+   <insert id="insertSpareDetail" parameterType="com.zr.Inquiry.model.InquirySpareDetail">
+      insert into inquirysparedetail (spareCoding,spareName,measurementUnit,moq,currencyCode,inquiryQty,deliveryCycle,inquiryId) VALUES
+      <foreach collection="list" item="item" open="(" separator="),(" close=")">
+         #{item.spareCoding},#{item.spareName},#{item.measurementUnit},#{item.moq},#{item.currencyCode},#{item.inquiryQty},#{item.deliveryCycle},#{item.inquiryId}
+      </foreach>
+   </insert>
+
+   <update id="updateInquiryTotal" parameterType="com.zr.Inquiry.model.InquiryTotalVo">
+      update inquirytotal set currencyCode=#{currencyCode},inquiryStatus=#{inquiryStatus},legalPersonId=#{legalPersonId},type=#{type},isTax=#{isTax},
+      startTime=#{startTime},endTime=#{endTime},updateTime=#{updateTime} where requestForQuotationId=#{requestForQuotationId}
+   </update>
+
+   <update id="updateSpareDetail" parameterType="list">
+      <foreach collection="list" separator=";" item="inquirySpare">
+         update inquirysparedetail set spareCoding=#{inquirySpare.spareCoding},spareName=#{spareName},currencyCode=#{currencyCode},deliveryCycle=#{deliveryCycle}
+         where inquiryId=#{inquirySpare.inquiryId}
+      </foreach>
+   </update>
+
+   <update id="updateSupplierDetail" parameterType="list">
+      <foreach collection="list" separator=";" item="inquirySupplier">
+         update inquirysupplierdetail set vendor=#{inquirySupplier.vendor}
+         where inquiryId=#{inquirySupplier.inquiryId}
+      </foreach>
+   </update>
+
+   <insert id="insertInquiryTotal" parameterType="com.zr.Inquiry.model.InquiryTotalVo" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+      insert into inquirytotal (requestForQuotationId,currencyCode,inquiryStatus,legalPersonId,type,isTax,startTime,endTime,createName,createTime,updateName,updateTime) values
+      (#{requestForQuotationId},#{currencyCode},#{inquiryStatus},#{legalPersonId},#{type},#{isTax},#{startTime},#{endTime},#{createName},#{createTime},#{updateName},#{updateTime})
+
+    </insert>
+
+
+   <select id="queryPageData" parameterType="com.zr.Inquiry.model.InquirySelectVo"
+           resultType="com.zr.Inquiry.model.InquiryTotalVo">
+      /*SELECT i.requestForQuotationId,i.startTime,i.endTime,i.createTime,u.`name`,l.legalPersonName from inquirytotal i
+      LEFT JOIN legalperson l ON i.legalPersonId=l.legalPersonId
+      INNER JOIN `user` u ON u.id=l.userId*/
+
+      SELECT DISTINCT i.*,lg.legalPersonName FROM inquirytotal i
+      LEFT JOIN inquirysupplierdetail isu ON i.id=isu.inquiryId
+      LEFT JOIN legalperson lg ON i.legalPersonId= lg.legalPersonId
+      where 1=1
+      <if test="vendorCode!=null and vendorCode!=''">
+         and isu.vendorCode=#{vendorCode}
+      </if>
+      <if test="legalPersonId!=null">
+         AND i.legalPersonId =#{legalPersonId}
+      </if>
+      <if test="requestForQuotationId!=null and requestForQuotationId!=''">
+         AND i.requestForQuotationId =#{requestForQuotationId}
+      </if>
+      <if test="createStartTime!=null">
+         AND i.createTime >=#{createStartTime}
+      </if>
+      <if test="createEndTime!=null">
+         AND  #{createEndTime} >= i.createTime
+      </if>
+      <if test="startTime!=null">
+         AND i.startTime >=#{startTime}
+      </if>
+      <if test="endTime!=null">
+         AND  #{endTime} >= i.endTime
+      </if>
+      <if test="type!=null">
+         AND i.type=#{type}
+      </if>
+      <if test="inquiryStatus!=null">
+         AND i.inquiryStatus=#{inquiryStatus}
+      </if>
+      limit #{offset},#{pageSize}
+   </select>
+   <select id="queryCount" parameterType="com.zr.Inquiry.model.InquirySelectVo"
+           resultType="integer">
+      SELECT count(DISTINCT(i.id)) FROM inquirytotal i
+      LEFT JOIN inquirysupplierdetail isu ON i.id=isu.inquiryId
+      LEFT JOIN legalperson lg ON i.legalPersonId= lg.legalPersonId
+      WHERE 1=1
+      <if test="vendorCode!=null and vendorCode!=''">
+         and isu.vendorCode=#{vendorCode}
+      </if>
+      <if test="legalPersonId!=null">
+         AND i.legalPersonId =#{legalPersonId}
+      </if>
+      <if test="requestForQuotationId!=null and requestForQuotationId!=''">
+         AND i.requestForQuotationId =#{requestForQuotationId}
+      </if>
+      <if test="createStartTime!=null">
+         AND i.createTime >=#{createStartTime}
+      </if>
+      <if test="createEndTime!=null">
+         AND  #{createEndTime} >= i.createTime
+      </if>
+      <if test="startTime!=null">
+         AND i.startTime >=#{startTime}
+      </if>
+      <if test="endTime!=null">
+         AND  #{endTime} >= i.endTime
+      </if>
+      <if test="type!=null">
+         AND i.type=#{type}
+      </if>
+      <if test="inquiryStatus!=null">
+         AND i.inquiryStatus=#{inquiryStatus}
+      </if>
+   </select>
+
+   <select id="queryInquiryTotal" resultType="com.zr.Inquiry.model.InquiryTotalVo" parameterType="string">
+      select i.*,l.legalPersonName from inquirytotal i
+      left join legalperson l on i.legalPersonId = l.legalPersonId
+      where  i.requestForQuotationId=#{requestForQuotationId}
+   </select>
+   <select id="querySpareById" resultType="com.zr.Inquiry.model.InquirySpareSelectVo" parameterType="integer">
+        SELECT * from inquirysparedetail WHERE inquiryId=#{inquiryId}
+   </select>
+
+   <select id="querySupplierById" resultType="com.zr.Inquiry.model.InquirySupplierSelectVo" parameterType="integer">
+        SELECT * from inquirysupplierdetail where inquiryId=#{inquiryId}
+   </select>
+</mapper>
